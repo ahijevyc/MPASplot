@@ -1,4 +1,4 @@
-# webplot plotting package
+# MPASplot plotting package
 
 ### create graphics from MPAS ensemble
 
@@ -6,7 +6,7 @@ For example, to plot max precipitation accumulation with contours of 500hPa mean
 mean 500hPa wind barbs from forecast hours [12, 18]:
 
 ```
-python webplot.py 20170518 --fill precipacc/max --fhr 12 18 --contour hgt500/mean \
+python webplot.py 20190518 --fill precipacc/max --fhr 12 18 --contour hgt500/mean \
     --barb wind500/mean --title 'Max precip acc, mean 500hPa hgt [m] and wind barbs [kt]' \
     --idir /glade/campaign/mmm/parc/schwartz/MPAS_JEDI/15-3km_mesh/cold_start \
     --init_file /glade/scratch/schwartz/MPAS/15-3km_mesh/mpas_init/2019042518/init.nc \

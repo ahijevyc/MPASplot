@@ -409,9 +409,9 @@ def parseargs():
 
             assert len(input) > 1, f"{f} has 2-3 components separated by /. Add '/mean'?"
 
-            thisdict['name']      = input[0]
-            thisdict['ensprod']   = input[1]
-            thisdict['arrayname'] = fieldinfo[input[0]]['fname'] # name of variable in input file
+            thisdict['name']    = input[0]
+            thisdict['ensprod'] = input[1]
+            thisdict['fname'] = fieldinfo[input[0]]['fname'] # name of variable in input file
             
             # assign contour levels and colors
             if (input[1] in ['prob', 'neprob', 'probgt', 'problt', 'neprobgt', 'neproblt', 'prob3d']):
@@ -491,9 +491,9 @@ def readEnsemble(Plot):
         logging.info(f"read {fields[f]['name']}")
         
         # save some variables for use in this function
-        arrays = fields[f]['arrayname']
-        ensprod = fields[f]['ensprod']
         fieldname = fields[f]['name']
+        ensprod = fields[f]['ensprod']
+        arrays = fields[f]['fname']
         if ensprod in ['prob', 'neprob', 'problt', 'probgt', 'neprobgt', 'neproblt', 'prob3d']: thresh = fields[f]['thresh']
         if ensprod.startswith('mem'): member = int(ensprod[3:])
         
@@ -512,13 +512,13 @@ def readEnsemble(Plot):
         # loop through each field, wind fields will have two fields that need to be read
         datalist = []
         for n,array in enumerate(arrays):
-            logging.debug(f'Reading data {array}')
-            #read in 3D array (times*members,ny,nx) from file object
             if 'arraylevel' in fields[f]:
                 if isinstance(fields[f]['arraylevel'], list): level = fields[f]['arraylevel'][n]
                 else: level = fields[f]['arraylevel']
             else: level = None
             
+            logging.debug(f'Reading {array}')
+            #read in 3D array (times*members,ny,nx) from file object
             if level == 'max':  data = fh[array].max(dim=level)
             elif level is None: data = fh[array]
             else:               data = fh[array].sel(level=level)
@@ -800,21 +800,11 @@ def computestp(data):
 
 def compute_sspf(data, cref_files):
     fh = xarray.open_mfdataset(cref_files)
-    #cref = fh['REFD_MAX'] #in diag files
-    cref = fh['REFL_MAX_COL'] #in upp files
-
-    # if all times are in one file, then need to reshape and extract desired times
-    #cref = cref.reshape((10,49,cref.shape[1],cref.shape[2])) # reshape
-    #cref = cref[:,13:36+1,:] # extract desired times
-    #cref = np.swapaxes(cref,0,1) # flip first two axes so time is first
-    #cref = cref.reshape((10*((13+1)-36)),cref.shape[2],cref.shape[3]) #reshape again
+    cref = fh['REFL_MAX_COL'] 
 
     # flag nearby points
-    #kernel = np.ones((5,5))
     cref_mask = (cref>=30.0)
-    #cref_mask = ndimage.filters.maximum_filter(cref_mask, footprint=kernel[np.newaxis,:])
  
-    #wind_cref_hits = (data[1]>=25.0)
     wind_cref_hits = np.logical_and( (data[1]>=25.0), cref_mask)
 
     sspf = np.logical_or( np.logical_or((data[0]>=75), wind_cref_hits), (data[2]>=1))

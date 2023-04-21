@@ -1,4 +1,4 @@
-name: webplot
+name: MPASplot
 channels:
   - conda-forge
   - defaults
@@ -9,4 +9,4 @@ dependencies:
   - netcdf4
   - dask
   - metpy
-prefix: /glade/u/home/ahijevyc/miniconda3/envs/webplot
+prefix: /glade/u/home/ahijevyc/miniconda3/envs/MPASplot
