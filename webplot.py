@@ -35,13 +35,11 @@ class webPlot:
         self.opts = parseargs()
         self.initdate = pd.to_datetime(self.opts['date'])
         self.ENS_SIZE = self.opts['ENS_SIZE']
-        self.autolevels = self.opts['autolevels']
         self.debug = self.opts['debug']
         self.domain = self.opts['domain']
         self.fhr = self.opts['fhr']
         self.idir = self.opts['idir']
         self.meshstr = self.opts['meshstr']
-        self.nbarbs = self.opts['nbarbs']
         self.nlat_max = self.opts['nlat_max']
         self.nlon_max = self.opts['nlon_max']
         self.title = self.opts['title']
@@ -105,6 +103,7 @@ class webPlot:
         lonCell[lonCell>=180] -= 360
         mpas_mesh["lonCell"] = lonCell
         mpas_mesh["latCell"] = np.degrees(mpas_mesh["latCell"]) #radians to degrees
+        self.mpas_mesh = mpas_mesh
 
     def plotTitleTimes(self):
         fontdict = {'family':'monospace', 'size':12, 'weight':'bold'}
@@ -138,7 +137,7 @@ class webPlot:
   
     def plotFill(self):
         if self.opts['fill']['name'] == 'crefuh': self.plotReflectivityUH(); return
-        if self.autolevels:
+        if self.opts["autolevels"]:
             min, max = self.data['fill'][0].min(), self.data['fill'][0].max()
             levels = np.linspace(min, max, num=10)
             cmap = colors.ListedColormap(self.opts['fill']['colors'])
@@ -229,10 +228,10 @@ class webPlot:
         plt.clabel(cs2, fontsize='small', fmt='%i')
 
     def plotBarbs(self):
-
-        skip = max([*self.x2d.shape, *self.y2d.shape])/self.nbarbs
+        nbarbs = self.opts["nbarbs"]
+        skip = max([*self.x2d.shape, *self.y2d.shape])/nbarbs
         skip = int(skip)
-        logging.debug(f"plotBarbs: nbarbs={self.nbarbs} skip={skip}")
+        logging.debug(f"plotBarbs: nbarbs={nbarbs} skip={skip}")
 
         if self.opts['fill']['name'] == 'crefuh': alpha=0.5
         else: alpha=1.0
@@ -463,7 +462,7 @@ def makeEnsembleList(Plot):
     for hr in fhr:
         validstr = (initdate + datetime.timedelta(hours=hr)).strftime('%Y-%m-%d_%H.%M.%S')
         if ENS_SIZE > 1:
-            file_list.extend([os.path.join(idir, f"{yyyymmddhh}/ens_{mem}/diag.{validstr}.nc") for mem in range(1,ENS_SIZE+1)])
+            file_list.extend([os.path.join(idir, f"{yyyymmddhh}/model_rundir/ens_{mem}/diag.{validstr}.nc") for mem in range(1,ENS_SIZE+1)])
         else:
             file_list.append( os.path.join(idir, f"{yyyymmddhh}/diag.{validstr}.nc") )
     logging.debug(f"file_list {file_list}")
@@ -474,11 +473,11 @@ def makeEnsembleList(Plot):
 
 
 def readEnsemble(Plot):
+    ''' Reads in desired fields and returns 2-D arrays of data for each field (barb/contour/field) '''
     initdate = Plot.initdate
     fhr = Plot.fhr
     fields = Plot.opts
     ENS_SIZE = Plot.ENS_SIZE
-    ''' Reads in desired fields and returns 2-D arrays of data for each field (barb/contour/field) '''
     logging.debug(fields)
     
     datadict = {}
