@@ -18,7 +18,7 @@ def readNCLcm(name):
     # first real line is ncolors = 256 (or something like that)
     # The rest is bunch of rgb values, one trio per line.
 
-    fh = open(os.getenv('NCARG_ROOT')+'lib/ncarg/colormaps/%s.rgb'%name, 'r')
+    fh = open('colormaps/%s.rgb'%name, 'r')
     rgb = np.loadtxt(fh, comments=[';', '#', 'n']) # treat ncolors=x as a comment (cause it starts with `n`)
     fh.close()
     if rgb.max() > 1:
