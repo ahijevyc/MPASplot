@@ -1,34 +1,37 @@
 import argparse
-from PIL import Image
-import cartopy
-from collections import defaultdict
 import datetime
-from fieldinfo import domains, readNCLcm
 import logging
-import matplotlib.colors as colors
-import matplotlib.pyplot as plt
-from metpy.units import units
-import mpas
-from mpas import fieldinfo
-import numpy as np
-import pandas as pd
+import os
 import pdb
 import pickle
-import os
-import scipy.ndimage as ndimage
-from scipy.interpolate import griddata
-from scipy.spatial import Delaunay
-import subprocess
 import re
+import subprocess
 import sys
 import time
-# created with f2py3 -c mpas_vort_cell.f90 -m vert2cell
-# Had to fix /glade/u/home/ahijevyc/miniconda3/envs/webplot/lib/python3.11/site-packages/numpy/f2py/src/fortranobject.c
-# Moved int i declaration outside for loop. (line 707)
-#import vert2cell
-import xarray
+from collections import defaultdict
 
-logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+import cartopy
+import matplotlib.colors as colors
+import matplotlib.pyplot as plt
+import mpas
+import numpy as np
+import pandas as pd
+import scipy.ndimage as ndimage
+import uxarray
+
+# created with f2py -c mpas_vort_cell.f90 -m vert2cell
+# had to load gcc module instead of intel
+import vert2cell
+import xarray
+from metpy.units import units
+from mpas import fieldinfo
+from PIL import Image
+from scipy.interpolate import griddata
+from scipy.spatial import Delaunay
+
+from fieldinfo import domains, readNCLcm
+
+logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
 class webPlot:
     '''A class to plot data from NCAR ensemble'''
