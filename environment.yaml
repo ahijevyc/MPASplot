@@ -1,12 +1,22 @@
-name: MPASplot
+name: mpas
 channels:
   - conda-forge
   - defaults
+  - r
 dependencies:
-  - pygrib
-  - scipy
-  - xarray
-  - netcdf4
-  - dask
+  - holoviews
+  - geoviews
+  - datashader
+  - ipykernel
+  - geocat-datafiles
+  - uxarray
+  - mpas_tools
+  - ca-certificates
+  - certifi
+  - openssl
+  - cmaps
   - metpy
-prefix: /glade/u/home/ahijevyc/miniconda3/envs/MPASplot
+  - scikit-learn
+  - cartopy
+  - spatialpandas
+prefix: /glade/work/ahijevyc/conda-envs/mpas
