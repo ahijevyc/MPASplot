@@ -223,7 +223,7 @@ class webPlot:
             data = self.latlonGrid(data)
 
         if self.opts['contour']['name'] in ['t2-0c']: data.values = ndimage.gaussian_filter(data, sigma=2)
-        else: data.values = ndimage.gaussian_filter(data, sigma=25)
+        else: data.values = ndimage.gaussian_filter(data, sigma=15)
 
         cs2 = self.ax.contour(self.x2d, self.y2d, data, levels=self.opts['contour']['levels'], colors='k', linewidths=linewidth, alpha=alpha)
         plt.clabel(cs2, fontsize='small', fmt='%i')
@@ -349,15 +349,14 @@ class webPlot:
 
         plt.savefig(outfile, transparent=transparent, bbox_inches="tight")
         
-        if self.opts['convert']:
-            # reduce colors to shrink file size
-            if not self.opts['fill']: ncolors = 48 #if no fill field exists
-            elif "prob" in self.opts['fill']['ensprod']: ncolors = 48
-            elif self.opts['fill']['name'] in ['crefuh']: ncolors = 48
-            else: ncolors = 255
-            img = Image.open(outfile)
-            img = img.convert("P", palette=Image.ADAPTIVE, colors=ncolors)
-            img.save(outfile, optimize=True)
+        # reduce colors to shrink file size
+        if not self.opts['fill']: ncolors = 48 #if no fill field exists
+        elif "prob" in self.opts['fill']['ensprod']: ncolors = 48
+        elif self.opts['fill']['name'] in ['crefuh']: ncolors = 48
+        else: ncolors = 255
+        img = Image.open(outfile)
+        img = img.convert("P", palette=Image.ADAPTIVE, colors=ncolors)
+        img.save(outfile, optimize=True)
 
         plt.clf()
         fsize = os.path.getsize(outfile)
@@ -372,7 +371,6 @@ def parseargs():
     parser.add_argument('--autolevels', action='store_true', help='use min/max to determine levels for plot')
     parser.add_argument('-b', '--barb', help='barb field (FIELD_PRODUCT_THRESH)')
     parser.add_argument('-c', '--contour', help='contour field (FIELD_PRODUCT_THRESH)')
-    parser.add_argument('-con', '--convert', default=True, action='store_false', help='run final image through imagemagick')
     parser.add_argument('-d', '--debug', action='store_true', help='turn on debugging')
     parser.add_argument('--domain', type=str, choices=domains.keys(), default="CONUS", help='domain of plot')
     parser.add_argument('--ENS_SIZE', type=int, default=1, help='number of members in ensemble')
@@ -387,7 +385,7 @@ def parseargs():
     parser.add_argument('--nbarbs', type=int, default=32, help='max barbs in one dimension')
     parser.add_argument('--nlon_max', type=int, default=1500, help='max pts in longitude dimension')
     parser.add_argument('--nlat_max', type=int, default=1500, help='max pts in latitude dimension')
-    parser.add_argument('--sigma', default=2, help='smooth probabilities using gaussian smoother')
+    parser.add_argument('--sigma', default=2, help='size of gaussian smoother for neighborhood ensemble probabilities')
     parser.add_argument('-t', '--title', help='title for plot')
 
     opts = vars(parser.parse_args()) # argparse.Namespace in form of dictionary
@@ -754,6 +752,7 @@ def compute_pmm(ensemble):
     return ens_mean
 
 def compute_neprob(ensemble, roi=0, sigma=0.0, type='gaussian'):
+    """ neighborhood ensemble probabilities """
     roi = np.rint(roi) # round to nearest integer
     assert len(ensemble.dims) >= 3, 'compute_neprob: needs ensemble of 2D arrays, not 1D arrays'
     y,x = np.ogrid[-roi:roi+1, -roi:roi+1]
