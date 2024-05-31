@@ -1,4 +1,5 @@
 import argparse
+from PIL import Image
 import cartopy
 from collections import defaultdict
 import datetime
@@ -24,7 +25,7 @@ import time
 # created with f2py3 -c mpas_vort_cell.f90 -m vert2cell
 # Had to fix /glade/u/home/ahijevyc/miniconda3/envs/webplot/lib/python3.11/site-packages/numpy/f2py/src/fortranobject.c
 # Moved int i declaration outside for loop. (line 707)
-import vert2cell
+#import vert2cell
 import xarray
 
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -354,15 +355,10 @@ class webPlot:
             elif "prob" in self.opts['fill']['ensprod']: ncolors = 48
             elif self.opts['fill']['name'] in ['crefuh']: ncolors = 48
             else: ncolors = 255
-            if os.environ['NCAR_HOST'] == "cheyenne":
-                quant = '/glade/u/home/ahijevyc/bin_cheyenne/pngquant'
-            else:
-                quant = '/glade/u/home/ahijevyc/bin/pngquant'
-            beforesize = os.path.getsize(outfile)
-            command = f"{quant} {ncolors} {outfile} --ext=.png --force"
-            logging.info(f"{beforesize} bytes before reducing colors")
-            logging.debug(command)
-            ret = subprocess.check_call(command.split())
+            img = Image.open(outfile)
+            img = img.convert("P", palette=Image.ADAPTIVE, colors=ncolors)
+            img.save(outfile, optimize=True)
+
         plt.clf()
         fsize = os.path.getsize(outfile)
         logging.info(f"created {outfile} {fsize} bytes")
@@ -457,12 +453,13 @@ def makeEnsembleList(Plot):
     initdate = Plot.initdate
     fhr = Plot.fhr
     ENS_SIZE = Plot.ENS_SIZE
+    logging.debug(f"ENS_SIZE={ENS_SIZE}")
     file_list = []
     yyyymmddhh = initdate.strftime('%Y%m%d%H')
     for hr in fhr:
         validstr = (initdate + datetime.timedelta(hours=hr)).strftime('%Y-%m-%d_%H.%M.%S')
         if ENS_SIZE > 1:
-            file_list.extend([os.path.join(idir, f"{yyyymmddhh}/model_rundir/ens_{mem}/diag.{validstr}.nc") for mem in range(1,ENS_SIZE+1)])
+            file_list.extend([os.path.join(idir, f"{yyyymmddhh}/post/mem_{mem}/diag.{validstr}.nc") for mem in range(1,ENS_SIZE+1)])
         else:
             file_list.append( os.path.join(idir, f"{yyyymmddhh}/diag.{validstr}.nc") )
     logging.debug(f"file_list {file_list}")
@@ -471,6 +468,22 @@ def makeEnsembleList(Plot):
         assert os.path.exists(f), f'{f} does not exist'
     return file_list 
 
+def xtime(x, format="%Y-%m-%d_%H:%M:%S"):
+    return pd.to_datetime(x.load().astype(str).item().strip(), format=format)
+
+def getfhr(df):
+    # get itime from initial_time variable
+    itime = xtime(df.initial_time)
+    df = df.assign_coords(time=[itime])
+    df = df.rename(time="itime")
+    # valid time
+    df["Time"] = [xtime(df.xtime)]
+    # extract member from source filename
+    filename = df.encoding["source"]
+    mem = re.search(r'mem_?(\d+)', filename).groups()[0]
+    mem = int(mem)
+    df = df.assign_coords({"mem":mem})
+    return df
 
 def readEnsemble(Plot):
     ''' Reads in desired fields and returns 2-D arrays of data for each field (barb/contour/field) '''
@@ -500,14 +513,11 @@ def readEnsemble(Plot):
         logging.info(f"opening xarray Dataset. {len(fhr)} forecast hours x {ENS_SIZE} members")
         paths = file_list
         logging.debug(f"1-d paths = {paths}")
-        paths = np.array(paths).reshape(len(fhr), ENS_SIZE).tolist()
-        logging.debug(f"2-d paths = {paths}")
-        # Use a nested list of paths so xarray assigns data to both "Time" and "mem" dimensions.
-        fh = xarray.open_mfdataset(paths,engine='netcdf4',combine="nested", concat_dim=['Time','mem'])
-        # turn XTIME = b'2017-05-02_00:00:00                                             ' to proper datetime.
-        # use .load() or only a '2' will be read
-        fh["Time"] = pd.to_datetime(fh.xtime.load().isel(mem=0).astype(str).str.strip(), format="%Y-%m-%d_%H:%M:%S") 
-  
+        paths2d = np.array(paths).reshape(len(fhr), ENS_SIZE).tolist()
+        logging.debug(f"2-d paths = {paths2d}")
+        # Use a nested list of paths so xarray assigns data to both time and member dimensions.
+        fh = xarray.open_mfdataset(paths2d, preprocess=getfhr, combine="nested", concat_dim=['Time','mem'])
+
         # loop through each field, wind fields will have two fields that need to be read
         datalist = []
         for n,array in enumerate(arrays):
@@ -542,7 +552,8 @@ def readEnsemble(Plot):
             if array in ['u10','v10']:                                  data = data.metpy.convert_units("knot")
             elif "zonal" in array or "meridional" in array:             data = data.metpy.convert_units("knot")
             elif array in ['dewpoint_surface', 't2m']:                  data = data.metpy.convert_units("degF")
-            elif array in ['precipw','rainnc','grpl_max','SNOW_ACC_NC']:data = data.metpy.convert_units("inch")
+            elif array in [ 'total_precip','precipw','rainnc','grpl_max','SNOW_ACC_NC' ]:
+                data = data.metpy.convert_units("inch")
             elif array in ['T_PL', 'TD_PL', 'SFC_LI']:                  data = data.metpy.convert_units("Celsius")
             elif array.startswith("temp"):                              data = data.metpy.convert_units("Celsius")
             elif array.startswith("dewp"):                              data = data.metpy.convert_units("Celsius")
@@ -561,7 +572,7 @@ def readEnsemble(Plot):
             elif fieldname.startswith('speed') or fieldname == 'bunkmag':
                 logging.info(f"derive speed from {arrays}")
                 speed = (datalist[0]**2 + datalist[1]**2)**0.5
-                speed.attrs["long_name"] = datalist[0].attrs["long_name"].replace("zonal wind"," wind")
+                speed.attrs["long_name"] = datalist[0].attrs["long_name"].replace("zonal wind"," wind") 
                 datalist = [speed]
             elif fieldname in ['shr06','shr01']: datalist = [datalist[0]-datalist[2], datalist[1]-datalist[3]]
             elif fieldname == 'uhratio': datalist = [compute_uhratio(datalist)]
