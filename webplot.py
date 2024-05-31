@@ -320,10 +320,9 @@ class webPlot:
         fig.text(0.51, pos.y0+0.3*pos.height, " "+initstr+"\n"+validstr, fontdict=fontdict, ha="left", 
                 transform=fig.transFigure)
 
-        # add NCAR logo and text below logo
+        # add NCAR logo
         xo, yo = fig.transFigure.transform((0.51,pos.y0))
         fig.figimage(plt.imread('ncar.png'), xo=xo, yo=yo)
-        #plt.text(x+10, y+5, 'ensemble.ucar.edu', fontdict={'size':9, 'color':'#505050'}, transform=None)
 
 
     def getInitValidStr(self):
@@ -343,7 +342,6 @@ class webPlot:
             if not transparent and not self.opts['fill']['ensprod'].endswith('stamp'):
                 img = plt.imread('ncar.png')
                 self.ax.figure.figimage(img, xo=10, yo=10)
-                #plt.text(x+10, y-54, 'ensemble.ucar.edu', fontdict={'size':9, 'color':'#505050'}, transform=None)
 
         self.ax.set_extent(self.extent, crs=self.ax.projection)
 
@@ -467,6 +465,8 @@ def makeEnsembleList(Plot):
     return file_list 
 
 def xtime(x, format="%Y-%m-%d_%H:%M:%S"):
+    # load dask var
+    # convert bytes to string, strip whitespace, parse time
     return pd.to_datetime(x.load().astype(str).item().strip(), format=format)
 
 def getfhr(df):
@@ -757,7 +757,7 @@ def compute_neprob(ensemble, roi=0, sigma=0.0, type='gaussian'):
     assert len(ensemble.dims) >= 3, 'compute_neprob: needs ensemble of 2D arrays, not 1D arrays'
     y,x = np.ogrid[-roi:roi+1, -roi:roi+1]
     kernel = x**2 + y**2 <= roi**2
-    ens_roi = ndimage.filters.maximum_filter(ensemble, footprint=kernel[np.newaxis,:])
+    ens_roi = ndimage.maximum_filter(ensemble, footprint=kernel[np.newaxis,:])
 
     if type == 'uniform':
         y,x = np.ogrid[-sigma:sigma+1, -sigma:sigma+1]
@@ -765,7 +765,7 @@ def compute_neprob(ensemble, roi=0, sigma=0.0, type='gaussian'):
         smoothed = ndimage.filters.convolve(ens_roi, kernel/float(kernel.sum()))
     elif type == 'gaussian':
         # smooth last 2 dimensions (not TimeMember dimension)
-        smoothed = ndimage.filters.gaussian_filter(ens_roi, (0,sigma,sigma))
+        smoothed = ndimage.gaussian_filter(ens_roi, (0,sigma,sigma))
     else:
         logging.error(f"compute_neprob: unknown filter {type}")
         sys.exit(1)
