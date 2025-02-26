@@ -19,9 +19,7 @@ import pandas as pd
 import scipy.ndimage as ndimage
 import uxarray
 
-# created with f2py -c mpas_vort_cell.f90 -m vert2cell
-# had to load gcc module instead of intel
-import vert2cell
+from vert2cell import vert2cellnumba
 import xarray
 from metpy.units import units
 from mpas import fieldinfo
@@ -545,7 +543,8 @@ def readEnsemble(Plot):
                 nCells = mpas_mesh.nCells.size
                 nVertices = data.nVertices.size
                 # verticesOnCell is the transpose of what mpas_vort_cell1 expects
-                dataCells = vert2cell.vert2cell(nEdgesOnCell, verticesOnCell.T, maxEdges, nVertLevels, nCells, nVertices, data)
+                #dataCells = vert2cell.vert2cell(nEdgesOnCell, verticesOnCell.T, maxEdges, nVertLevels, nCells, nVertices, data)
+                dataCells = vert2cellnumba(nEdgesOnCell.values, verticesOnCell.T.values, data.values)
                 # Assign to new DataArray with nCells dimension. transfer DataArray attributes
                 data = xarray.DataArray(data = dataCells, coords = dict(TimeMem=data.TimeMem, nCells=fh.nCells), attrs=data.attrs).unstack()
 
