@@ -63,4 +63,9 @@ options:
 
 Create conda environment described in environment.yaml.
 
-Use f2py3 to install vert2cell.
+Use f2py to install vert2cell.
+
+```
+module load gcc
+f2py -c mpas_vort_cell.f90 -m vert2cell
+```
