@@ -38,7 +38,7 @@ fieldinfo.update({
                     'cmap'   : ['#eeeeee', '#dddddd', '#cccccc', '#aaaaaa']+readNCLcm('precip2_17lev')[3:-1], 'fname': ['sbcape'] },
   'mlcape'       :{ 'levels' : [100,250,500,750,1000,1250,1500,1750,2000,2500,3000,3500,4000,4500,5000,5500,6000],
                     'cmap'   : ['#eeeeee', '#dddddd', '#cccccc', '#aaaaaa']+readNCLcm('precip2_17lev')[3:-1], 'fname': ['mlcape'] },
-  'mucape'       :{ 'levels' : [10,25,50,100,250,500,750,1000,1250,1500,1750,2000,2500,3000,3500,4000,4500,5000,5500,6000],
+  'mucape'       :{ 'levels' : [10,25,50,100,250,500,750,1000,1250,1500,1750,2000,2500,3000,3500,4000,4500,5000,5500],
                     'cmap'   : ['#eeeeee', '#dddddd', '#cccccc', '#aaaaaa']+readNCLcm('precip2_17lev')[3:-1], 'fname': ['cape'] },
   'sbcinh'       :{ 'levels' : [50,75,100,150,200,250,500], 'cmap': readNCLcm('topo_15lev')[1:], 'fname': ['sbcin'] },
   'mlcinh'       :{ 'levels' : [50,75,100,150,200,250,500], 'cmap': readNCLcm('topo_15lev')[1:], 'fname': ['mlcin'] },
@@ -156,4 +156,5 @@ domains = { 'CONUS' :{ 'corners': [23.1593,-120.811,46.8857,-65.0212], 'fig_widt
             'SE'  :{ 'corners': [26.10,-92.75,36.00,-71.00], 'fig_width':1080 },
             'NE'  :{ 'corners': [38.00,-91.00,46.80,-65.30], 'fig_width':1080 },
             'MATL':{ 'corners': [33.50,-92.25,41.50,-68.50], 'fig_width':1080 },
+            'WEI' :{ 'corners': [-10, 90, 10, 110], 'fig_width':1080 },
 }

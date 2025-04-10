@@ -47,7 +47,7 @@ class webPlot:
         self.title = self.opts['title']
 
         self.get_mpas_mesh()
-        self.loadMap()
+        self.loadMap(lat_1=self.opts["lat_1"], lat_2=self.opts["lat_2"], lon_0=self.opts["lon_0"])
         self.data = readEnsemble(self)
         self.plotFields()
         self.plotTitleTimes()
@@ -80,10 +80,10 @@ class webPlot:
         outfile = os.path.realpath(outfile)
         return outfile
 
-    def loadMap(self):
+    def loadMap(self, **kwargs):
         self.pk_file = os.path.join(os.getenv('TMPDIR'), f"{self.meshstr}_{self.domain}_{self.nlon_max}x{self.nlat_max}.pk")
         if not os.path.exists(self.pk_file):
-            saveNewMap(self)
+            saveNewMap(self, **kwargs)
         logging.debug(f"loadMap: use old pickle file {self.pk_file}")
         (self.ax, self.extent, self.lons, self.lats, 
                 self.lon2d, self.lat2d, self.x2d, self.y2d, self.ibox, self.x, self.y, self.vtx, 
@@ -235,7 +235,7 @@ class webPlot:
         skip = int(skip)
         logging.debug(f"plotBarbs: nbarbs={nbarbs} skip={skip}")
 
-        if self.opts['fill']['name'] == 'crefuh': alpha=0.5
+        if 'name' in self.opts['fill'] and self.opts['fill']['name'] == 'crefuh': alpha=0.5
         else: alpha=1.0
 
         logging.debug(f"plotBarbs: starting barbs {[x.name for x in self.data['barb']]}")
@@ -381,6 +381,9 @@ def parseargs():
             help="path to model output")
     parser.add_argument('--init_file', help='path to file with lat/lon/area of mesh')
     parser.add_argument('--meshstr', type=str, help=f'mesh id. used to prefix output file and pickle file')
+    parser.add_argument('--lat_1', type=float, default=32)
+    parser.add_argument('--lat_2', type=float, default=46)
+    parser.add_argument('--lon_0', type=float, default=-101)
     parser.add_argument('--nbarbs', type=int, default=32, help='max barbs in one dimension')
     parser.add_argument('--nlon_max', type=int, default=1500, help='max pts in longitude dimension')
     parser.add_argument('--nlat_max', type=int, default=1500, help='max pts in latitude dimension')
@@ -452,13 +455,12 @@ def makeEnsembleList(Plot):
     ENS_SIZE = Plot.ENS_SIZE
     logging.debug(f"ENS_SIZE={ENS_SIZE}")
     file_list = []
-    yyyymmddhh = initdate.strftime('%Y%m%d%H')
     for hr in fhr:
         validstr = (initdate + datetime.timedelta(hours=hr)).strftime('%Y-%m-%d_%H.%M.%S')
         if ENS_SIZE > 1:
-            file_list.extend([os.path.join(idir, f"{yyyymmddhh}/post/mem_{mem}/diag.{validstr}.nc") for mem in range(1,ENS_SIZE+1)])
+            file_list.extend([os.path.join(idir, f"mem_{mem}/diag.{validstr}.nc") for mem in range(1,ENS_SIZE+1)])
         else:
-            file_list.append( os.path.join(idir, f"{yyyymmddhh}/diag.{validstr}.nc") )
+            file_list.append( os.path.join(idir, f"diag.{validstr}.nc") )
     logging.debug(f"file_list {file_list}")
     assert len(file_list), 'Empty file_list'
     for f in file_list:
@@ -479,9 +481,12 @@ def getfhr(df):
     df["Time"] = [xtime(df.xtime)]
     # extract member from source filename
     filename = df.encoding["source"]
-    mem = re.search(r'mem_?(\d+)', filename).groups()[0]
-    mem = int(mem)
-    df = df.assign_coords({"mem":mem})
+    mem = re.search(r'mem_?(\d+)', filename)
+    if mem:
+        mem = mem.groups()[0]
+        mem = re.search(r'mem_?(\d+)', filename).groups()[0]
+        mem = int(mem)
+        df = df.assign_coords({"mem":mem})
     return df
 
 def readEnsemble(Plot):
@@ -656,10 +661,12 @@ def readEnsemble(Plot):
 
 
 
-def saveNewMap(plot):
+def saveNewMap(plot, **kwargs):
     logging.info(f"saveNewMap: pk_file={plot.pk_file}")
     ll_lat, ll_lon, ur_lat, ur_lon = domains[plot.domain]['corners']
-    lat_1, lat_2, lon_0 = 32., 46., -101.
+    lat_1 = kwargs.pop("lat_1", 32)
+    lat_2 = kwargs.pop("lat_2", 46)
+    lon_0 = kwargs.pop("lon_0", -101)
     fig = plt.figure()
     
     proj = cartopy.crs.LambertConformal(central_longitude=lon_0, standard_parallels=(lat_1,lat_2))
@@ -687,6 +694,9 @@ def saveNewMap(plot):
 
     # y/x aspect ratio was an attribute of Basemap object, but not cartopy.
     aspect = (ury - lly) / (urx - llx)
+    logging.info(f"ury - lly: {ury}-{lly}")
+    logging.info(f"aspect: {aspect}")
+
 
     # Constant figure width, no matter the aspect ratio.
     fig.set_size_inches(16,16*aspect)
