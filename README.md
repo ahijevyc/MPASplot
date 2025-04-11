@@ -56,6 +56,8 @@ options:
   --sigma SIGMA         size of gaussian smoother for neighborhood ensemble probabilities (default: 2)
   -t TITLE, --title TITLE
                         title for plot (default: None)
+```
+
 ### Installation
 
 Create conda environment described in environment.yaml.
