@@ -47,7 +47,7 @@ class webPlot:
         self.title = self.opts['title']
 
         self.get_mpas_mesh()
-        self.loadMap(lat_1=self.opts["lat_1"], lat_2=self.opts["lat_2"], lon_0=self.opts["lon_0"])
+        self.loadMap(standard_parallels=self.opts["standard_parallels"], central_longitude=self.opts["central_longitude"])
         self.data = readEnsemble(self)
         self.plotFields()
         self.plotTitleTimes()
@@ -381,9 +381,8 @@ def parseargs():
             help="path to model output")
     parser.add_argument('--init_file', help='path to file with lat/lon/area of mesh')
     parser.add_argument('--meshstr', type=str, help=f'mesh id. used to prefix output file and pickle file')
-    parser.add_argument('--lat_1', type=float, default=32)
-    parser.add_argument('--lat_2', type=float, default=46)
-    parser.add_argument('--lon_0', type=float, default=-101)
+    parser.add_argument('--standard_parallels', type=float, nargs=2, default=(32, 46), help="for cartopy.crs.LambertConformal")
+    parser.add_argument('--central_longitude', type=float, default=-101, help="for cartopy.crs.LambertConformal")
     parser.add_argument('--nbarbs', type=int, default=32, help='max barbs in one dimension')
     parser.add_argument('--nlon_max', type=int, default=1500, help='max pts in longitude dimension')
     parser.add_argument('--nlat_max', type=int, default=1500, help='max pts in latitude dimension')
@@ -664,12 +663,11 @@ def readEnsemble(Plot):
 def saveNewMap(plot, **kwargs):
     logging.info(f"saveNewMap: pk_file={plot.pk_file}")
     ll_lat, ll_lon, ur_lat, ur_lon = domains[plot.domain]['corners']
-    lat_1 = kwargs.pop("lat_1", 32)
-    lat_2 = kwargs.pop("lat_2", 46)
-    lon_0 = kwargs.pop("lon_0", -101)
+    standard_parallels = kwargs.pop("standard_parallels", (32, 46))
+    central_longitude = kwargs.pop("central_longitude", -101)
     fig = plt.figure()
     
-    proj = cartopy.crs.LambertConformal(central_longitude=lon_0, standard_parallels=(lat_1,lat_2))
+    proj = cartopy.crs.LambertConformal(central_longitude=central_longitude, standard_parallels=standard_parallels)
     (llx, lly, llz), (urx, ury, urz) = proj.transform_points(
             cartopy.crs.PlateCarree(), 
             np.array([ll_lon, ur_lon]), 

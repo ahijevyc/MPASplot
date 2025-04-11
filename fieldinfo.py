@@ -1,5 +1,4 @@
 from collections import defaultdict
-import os # for NCARG_ROOT
 import numpy as np
 
 def readcm(name):
